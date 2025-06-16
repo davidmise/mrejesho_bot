@@ -1,49 +1,43 @@
 <?php
-// feedback-api.php
 
-// Allow cross-origin and accept JSON
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: POST");
 
-// Get JSON input
-$data = json_decode(file_get_contents("php://input"), true);
+require_once 'db.php'; // reuse your DB credentials
 
-// Validate
-if (!isset($data['sender_number'], $data['message'], $data['rating'])) {
-    http_response_code(400);
-    echo json_encode(["error" => "Missing required fields"]);
-    exit;
-}
+try {
+    $data = json_decode(file_get_contents("php://input"), true);
 
-$sender = $data['sender_number'];
-$message = $data['message'];
-$rating = (int) $data['rating'];
+    if (!isset($data['sender_number'], $data['message'], $data['rating'])) {
+        http_response_code(400);
+        echo json_encode(["error" => "Missing required fields"]);
+        exit;
+    }
 
-// Connect to DB
-$host = "localhost";
-$dbname = "mrejesho";
-$username = "root";
-$password = ""; // default for XAMPP/WAMP
+    $senderFull = $data['sender_number'];
+    $senderParts = explode('@', $senderFull);
+    $sender = $senderParts[0];  // Extract phone number part only
 
-$conn = new mysqli($host, $username, $password, $dbname);
+    $message = $data['message'];
+    $rating = (int) $data['rating'];
 
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["error" => "Database connection failed"]);
-    exit;
-}
+ 
+    $stmt = $conn->prepare("INSERT INTO feedback (sender_number, message, rating) VALUES (?, ?, ?)");
+    $stmt->bind_param("ssi", $sender, $message, $rating);
 
-// Insert into DB
-$stmt = $conn->prepare("INSERT INTO feedback (sender_number, message, rating) VALUES (?, ?, ?)");
-$stmt->bind_param("ssi", $sender, $message, $rating);
+    $stmt->execute();
 
-if ($stmt->execute()) {
     echo json_encode(["message" => "Feedback saved successfully"]);
-} else {
-    http_response_code(500);
-    echo json_encode(["error" => "Failed to insert feedback"]);
-}
 
-$stmt->close();
-$conn->close();
+    $stmt->close();
+    $conn->close();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(["error" => "Server error", "details" => $e->getMessage()]);
+}

@@ -1,11 +1,21 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "mrejesho");
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+$host = 'localhost';
+$user = 'mrejesho_admin';
+$pass = 'P@$$w0rd';
+$db   = 'mrejesho';
+
+$conn = new mysqli($host, $user, $pass, $db);
 
 if ($conn->connect_error) {
-    die("DB connection failed");
+    die("Connection failed: (" . $conn->connect_errno . ") " . $conn->connect_error);
 }
 
 $result = $conn->query("SELECT * FROM feedback ORDER BY created_at DESC");
+
 ?>
 
 <!DOCTYPE html>
@@ -28,7 +38,7 @@ $result = $conn->query("SELECT * FROM feedback ORDER BY created_at DESC");
       <th>Rating</th>
       <th>Time</th>
     </tr>
-    <?php while ($row = $result->fetch_assoc()): ?>
+ <?php while ($row = $result->fetch_assoc()): ?>
     <tr>
       <td><?= $row['id'] ?></td>
       <td><?= $row['sender_number'] ?></td>
