@@ -49,7 +49,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Mrejesho Bot</title>
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
 
 </head>
 <body>
@@ -69,9 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="mb-3 position-relative">
                     <label for="password" class="form-label">Password</label>
                     <input type="password" class="form-control" name="password" id="password" required>
-                    <span class="password-toggle" onclick="togglePassword()">
+                    <!-- <span class="password-toggle" onclick="togglePassword()">
                         👁️
-                    </span>
+                    </span> -->
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-login">Login</button>
@@ -86,8 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 
     <!-- Bootstrap 5 JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Password toggle script -->
     <script>
         function togglePassword() {

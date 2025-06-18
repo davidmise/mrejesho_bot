@@ -10,7 +10,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
 $host = 'localhost';
 $user = 'mrejesho_admin';
 $pass = 'P@$$w0rd';
-$db   = 'mrejesho';
+$db = 'mrejesho';
 
 $conn = new mysqli($host, $user, $pass, $db);
 
@@ -99,7 +99,9 @@ for ($i = 6; $i >= 0; $i--) {
                 <button class="btn btn-link d-md-none rounded-circle mr-3" id="sidebarToggle">
                     <i class="fa fa-bars"></i>
                 </button>
-                <h5 class="text-gray-800 mb-0">Dashboard Overview</h5>
+                <span class="text-gray-800 mb-0 fw-bold">Dashboard Overview</span>
+                <h5 class=""></h5>
+
             </div>
         </nav>
 
@@ -236,14 +238,15 @@ for ($i = 6; $i >= 0; $i--) {
                                         <?php
                                         $counter = 1;
                                         while ($row = $recent_feedback->fetch_assoc()):
-                                            $rating_class = 'rating-' . (int)$row['rating'];
-                                        ?>
+                                            $rating_class = 'rating-' . (int) $row['rating'];
+                                            ?>
                                             <tr>
                                                 <td><?= $counter++ ?></td>
                                                 <td><?= htmlspecialchars($row['sender_number']) ?></td>
-                                                <td><?= htmlspecialchars(substr($row['message'], 0, 50)) . (strlen($row['message']) > 50 ? '...' : '') ?></td>
+                                                <td><?= htmlspecialchars(substr($row['message'], 0, 50)) . (strlen($row['message']) > 50 ? '...' : '') ?>
+                                                </td>
                                                 <td class="rating-cell <?= $rating_class ?>">
-                                                    <?= str_repeat('★', (int)$row['rating']) ?>
+                                                    <?= str_repeat('★', (int) $row['rating']) ?>
                                                 </td>
                                                 <td><?= date('M j, Y g:i A', strtotime($row['created_at'])) ?></td>
                                             </tr>
@@ -258,12 +261,25 @@ for ($i = 6; $i >= 0; $i--) {
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="footer mt-5 py-3 bg-light text-center border-top">
+        <div class="container">
+            <span class="text-muted">
+                &copy; <?= date('Y') ?> Mrejesho Bot. All rights reserved.
+            </span>
+            <br>
+            <small class="text-muted">
+                Developed by <a href="#" target="_blank" class="text-decoration-none">David M. Mushi</a>
+            </small>
+        </div>
+    </footer>
+
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script>
         // Toggle sidebar on mobile
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
+        document.getElementById('sidebarToggle').addEventListener('click', function () {
             document.querySelector('.sidebar').classList.toggle('toggled');
             document.getElementById('content').classList.toggle('toggled');
         });

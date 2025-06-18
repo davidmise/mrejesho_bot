@@ -53,7 +53,8 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
     <title>Dashboard | Mrejesho Bot</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
@@ -63,7 +64,7 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
 
 <body>
     <!-- Sidebar -->
-<nav class="sidebar">
+    <nav class="sidebar">
         <div class="sidebar-brand text-center py-4">
             <i class="fas fa-robot mb-2"></i> <span>Mrejesho Bot</span>
         </div>
@@ -104,7 +105,7 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                 <button class="btn btn-link d-md-none rounded-circle mr-3" id="sidebarToggle">
                     <i class="fa fa-bars"></i>
                 </button>
-                <span class="text-gray-800 mb-0">Organization Profile </span>
+                <span class="text-gray-800 mb-0 fw-bold">Organization Profile </span>
                 <h5 class=""></h5>
             </div>
         </nav>
@@ -129,24 +130,30 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                 <form action="update_organization.php" method="POST">
                                     <div class="mb-3">
                                         <label class="form-label">Username</label>
-                                        <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($user['username']) ?>" required>
+                                        <input type="text" class="form-control" name="username"
+                                            value="<?= htmlspecialchars($user['username']) ?>" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Organization Name</label>
-                                        <input type="text" class="form-control" name="name" value="<?= htmlspecialchars($org['name']) ?>" required>
+                                        <input type="text" class="form-control" name="name"
+                                            value="<?= htmlspecialchars($org['name']) ?>" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">WhatsApp Number</label>
                                         <div class="input-group">
                                             <span class="input-group-text">+</span>
-                                            <input type="text" class="form-control" name="whatsapp_number" value="<?= htmlspecialchars($org['whatsapp_number']) ?>">
+                                            <input type="text" class="form-control" name="whatsapp_number"
+                                                value="<?= htmlspecialchars($org['whatsapp_number']) ?>">
                                         </div>
-                                        <small class="text-muted">Include country code without '+' (e.g., 254712345678)</small>
+                                        <small class="text-muted">Include country code without '+' (e.g.,
+                                            254712345678)</small>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Secret Code</label>
-                                        <input type="text" class="form-control" name="secret_code" value="<?= htmlspecialchars($org['secret_code']) ?>" required>
-                                        <small class="text-muted">This code will trigger your bot when sent via WhatsApp</small>
+                                        <input type="text" class="form-control" name="secret_code"
+                                            value="<?= htmlspecialchars($org['secret_code']) ?>" required>
+                                        <small class="text-muted">This code will trigger your bot when sent via
+                                            WhatsApp</small>
                                     </div>
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-save mr-2"></i> Update
@@ -164,12 +171,14 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                     <i class="fas fa-qrcode mr-2"></i> <span>Feedback QR Code</span>
                                 </div>
                                 <div class="card-body text-center">
-                                    <p class="card-text">Scan this code to start a WhatsApp conversation that automatically sends your secret code.</p>
+                                    <p class="card-text">Scan this code to start a WhatsApp conversation that automatically
+                                        sends your secret code.</p>
                                     <div class="qr-container">
                                         <?= $qrCodeSvg ?>
                                     </div>
                                     <div class="d-flex justify-content-center gap-2 mt-3">
-                                        <a href="data:image/svg+xml;base64,<?= $encodedQr ?>" download="feedback_qr.svg" class="btn btn-success">
+                                        <a href="data:image/svg+xml;base64,<?= $encodedQr ?>" download="feedback_qr.svg"
+                                            class="btn btn-success">
                                             <i class="fas fa-download mr-2"></i>Download SVG
                                         </a>
                                         <a href="<?= $qrCodeUrl ?>" target="_blank" class="btn btn-outline-success">
@@ -197,16 +206,26 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                     <i class="fas fa-robot mr-2"></i> <span>Bot Connection QR Code</span>
                                 </div>
                                 <div class="card-body text-center">
-                                    <p class="card-text">Scan this code with your WhatsApp mobile app to connect your bot account.</p>
-                                  <div class="qr-containe" style="text-align:center;">
-                                        <img src="auth_info/auth_info/latest_qr.svg" alt="QR Code Preview" style="max-width: 200px;" />
-                                  </div>
+                                    <p class="card-text">Scan this code with your WhatsApp mobile app to connect your bot
+                                        account.</p>
+                                    <div class="qr-containe" style="text-align:center;">
+                                        <img src="auth_info/auth_info/latest_qr.svg" alt="QR Code Preview"
+                                            style="max-width: 300px;" />
+                                    </div>
                                     <a href="auth_info/auth_info/latest_qr.svg" download="bot_qr.svg" class="btn btn-info mt-3">
                                         <i class="fas fa-download mr-2"></i>Download SVG
                                     </a>
                                 </div>
                             </div>
+                                            <?php else: ?>
+                            <div class="card p-2">
+                                <div class="bg-light  text-muted text-center">
+                                <p> Type the command `node index.js` to start the bot. </p>
+
+                                </div>
+                            </div>
                         <?php endif; ?>
+
                     </div>
                 </div>
             <?php else: ?>
@@ -217,12 +236,26 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="footer mt-5 py-3 bg-light text-center border-top">
+        <div class="container">
+            <span class="text-muted">
+                &copy; <?= date('Y') ?> Mrejesho Bot. All rights reserved.
+            </span>
+            <br>
+            <small class="text-muted">
+                Developed by <a href="#" target="_blank" class="text-decoration-none">David M. Mushi</a>
+            </small>
+        </div>
+    </footer>
+
+
     <!-- Bootstrap 5 JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script>
         // Toggle sidebar on mobile
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
+        document.getElementById('sidebarToggle').addEventListener('click', function () {
             document.querySelector('.sidebar').classList.toggle('toggled');
             document.getElementById('content').classList.toggle('toggled');
         });

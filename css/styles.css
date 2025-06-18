@@ -5,6 +5,9 @@
  * Date: [Current Date]
  */
 
+ /* Add to your existing styles.css */
+
+
 /* ================ ROOT VARIABLES ================ */
 :root {
     /* Primary color scheme */
@@ -36,6 +39,70 @@
     
     /* Transitions */
     --transition: all 0.3s ease;
+}
+
+
+/* Star Rating Colors (1-10 scale) */
+.rating-1 { color: #ff0000; } /* Red */
+.rating-2 { color: #ff3300; }
+.rating-3 { color: #ff6600; }
+.rating-4 { color: #ff9900; }
+.rating-5 { color: #ffcc00; } /* Yellow */
+.rating-6 { color: #ccff00; }
+.rating-7 { color: #99ff00; }
+.rating-8 { color: #66ff00; }
+.rating-9 { color: #33ff00; }
+.rating-10 { color: #ffd700; } /* Gold */
+
+/* Filter Cards */
+.filter-card {
+    border-left: 0.25rem solid var(--primary-color);
+    margin-bottom: 1rem;
+    transition: var(--transition);
+}
+
+.filter-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-sm);
+}
+
+.filter-card .card-body {
+    padding: 1rem;
+}
+
+.filter-card .form-control, 
+.filter-card .form-select {
+    margin-bottom: 0.5rem;
+}
+
+/* Quick Filter Buttons */
+.quick-filter-btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Export Button */
+.btn-export {
+    background-color: #28a745;
+    color: white;
+    border: none;
+}
+
+.btn-export:hover {
+    background-color: #218838;
+    color: white;
+}
+
+/* Clear Filters Button */
+.btn-clear {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+
+.btn-clear:hover {
+    background-color: #5a6268;
+    color: white;
 }
 
 /* ================ BASE STYLES ================ */
