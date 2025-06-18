@@ -198,7 +198,7 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                 </div>
                                 <div class="card-body text-center">
                                     <p class="card-text">Scan this code with your WhatsApp mobile app to connect your bot account.</p>
-                                  <div class="qr-container" style="text-align:center;">
+                                  <div class="qr-containe" style="text-align:center;">
                                         <img src="auth_info/auth_info/latest_qr.svg" alt="QR Code Preview" style="max-width: 200px;" />
                                   </div>
                                     <a href="auth_info/auth_info/latest_qr.svg" download="bot_qr.svg" class="btn btn-info mt-3">
