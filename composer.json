@@ -1,0 +1,6 @@
+{
+    "name": "root/mrejesho_bot",
+    "require": {
+        "endroid/qr-code": "^4.0"
+    }
+}
