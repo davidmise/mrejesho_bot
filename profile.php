@@ -51,6 +51,8 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
 <head>
     <meta charset="UTF-8">
     <title>Dashboard | Mrejesho Bot</title>
+    <!-- Favicon -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 CSS -->
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">

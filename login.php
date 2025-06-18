@@ -48,6 +48,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Mrejesho Bot</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+
     <!-- Bootstrap 5 CSS -->
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
