@@ -1,58 +1,46 @@
 <?php
-session_start(); // Start session
+session_start();
 
-// Redirect to login page if not authenticated
+
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("Location: login.php");
     exit();
 }
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // Database connection
-$host = 'localhost';
-$user = 'mrejesho_admin';
-$pass = 'P@$$w0rd';
-$db   = 'mrejesho';
+$conn = new mysqli('localhost', 'mrejesho_admin', 'P@$$w0rd', 'mrejesho');
 
-$conn = new mysqli($host, $user, $pass, $db);
+// Initialize filters
+$filters = [
+    'rating' => $_GET['rating'] ?? null,
+    'start_date' => $_GET['start_date'] ?? null,
+    'end_date' => $_GET['end_date'] ?? null,
+    'quick_filter' => $_GET['quick_filter'] ?? null
+];
 
-if ($conn->connect_error) {
-    die("Connection failed: (" . $conn->connect_errno . ") " . $conn->connect_error);
-}
-
-// Initialize filter variables
-$rating_filter = isset($_GET['rating']) ? (int)$_GET['rating'] : null;
-$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : null;
-$end_date = isset($_GET['end_date']) ? $_GET['end_date'] : null;
-$quick_filter = isset($_GET['quick_filter']) ? $_GET['quick_filter'] : null;
-
-// Build base query
+// Build query with filters
 $query = "SELECT * FROM feedback WHERE 1=1";
 $count_query = "SELECT COUNT(*) AS total FROM feedback WHERE 1=1";
 
-// Apply filters
-if ($rating_filter) {
-    $query .= " AND rating = $rating_filter";
-    $count_query .= " AND rating = $rating_filter";
+if ($filters['rating']) {
+    $query .= " AND rating = " . (int) $filters['rating'];
+    $count_query .= " AND rating = " . (int) $filters['rating'];
 }
 
-if ($start_date) {
-    $query .= " AND DATE(created_at) >= '$start_date'";
-    $count_query .= " AND DATE(created_at) >= '$start_date'";
+if ($filters['start_date']) {
+    $query .= " AND DATE(created_at) >= '" . $conn->real_escape_string($filters['start_date']) . "'";
+    $count_query .= " AND DATE(created_at) >= '" . $conn->real_escape_string($filters['start_date']) . "'";
 }
 
-if ($end_date) {
-    $query .= " AND DATE(created_at) <= '$end_date'";
-    $count_query .= " AND DATE(created_at) <= '$end_date'";
+if ($filters['end_date']) {
+    $query .= " AND DATE(created_at) <= '" . $conn->real_escape_string($filters['end_date']) . "'";
+    $count_query .= " AND DATE(created_at) <= '" . $conn->real_escape_string($filters['end_date']) . "'";
 }
 
 // Apply quick filters
-if ($quick_filter) {
+if ($filters['quick_filter']) {
     $today = date('Y-m-d');
-    switch ($quick_filter) {
+    switch ($filters['quick_filter']) {
         case 'today':
             $query .= " AND DATE(created_at) = '$today'";
             $count_query .= " AND DATE(created_at) = '$today'";
@@ -68,125 +56,320 @@ if ($quick_filter) {
     }
 }
 
-// Complete queries
-$query .= " ORDER BY created_at DESC";
-$count_result = $conn->query($count_query);
-$total_rows = $count_result->fetch_assoc()['total'];
+// Get total count
+$total_rows = $conn->query($count_query)->fetch_assoc()['total'];
 
 // Pagination
 $limit = 10;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 $total_pages = ceil($total_rows / $limit);
 
-$query .= " LIMIT $limit OFFSET $offset";
+// Final query with pagination
+$query .= " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
 $result = $conn->query($query);
 
-// Function to export to CSV
+// Export functionality
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="feedback_export_' . date('Y-m-d') . '.csv"');
-    
+
     $output = fopen('php://output', 'w');
-    
-    // Header row
-    fputcsv($output, array('ID', 'Sender Number', 'Message', 'Rating', 'Created At'));
-    
-    // Data rows
+    fputcsv($output, ['ID', 'Sender', 'Message', 'Rating', 'Date']);
+
     $export_query = str_replace("LIMIT $limit OFFSET $offset", "", $query);
     $export_result = $conn->query($export_query);
+
     while ($row = $export_result->fetch_assoc()) {
-        fputcsv($output, $row);
+        fputcsv($output, [
+            $row['id'],
+            $row['sender_number'],
+            $row['message'],
+            $row['rating'],
+            $row['created_at']
+        ]);
     }
-    
+
     fclose($output);
     exit();
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback List | Mrejesho Bot</title>
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-
-    <!-- Bootstrap 5 CSS -->
-    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+    <title>Feedback | Mrejesho Bot</title>
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Bootstrap 5 CSS (local) -->
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- <link href="assets/css/bootstrap.min.css" rel="stylesheet"> -->
+    <!-- Font Awesome (local) -->
+    <!-- <link href="assets/css/fontawesome.min.css" rel="stylesheet"> -->
+    <link href="node_modules/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/solid.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="assets/css/styles.css" rel="stylesheet">
     <style>
-        
-/* Star Rating Colors (1-10 scale) */
-.rating-1 { color: #ff0000; } /* Red */
-.rating-2 { color: #ff3300; }
-.rating-3 { color: #ff6600; }
-.rating-4 { color: #ff9900; }
-.rating-5 { color: #ffcc00; } /* Yellow */
-.rating-6 { color: #ccff00; }
-.rating-7 { color: #99ff00; }
-.rating-8 { color: #66ff00; }
-.rating-9 { color: #33ff00; }
-.rating-10 { color: #ffd700; } /* Gold */
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --accent-color: #dddfeb;
+            --text-color: #858796;
+            --dark-color: #5a5c69;
+        }
 
-/* Filter Cards */
-.filter-card {
-    border-left: 0.25rem solid var(--primary-color);
-    margin-bottom: 1rem;
-    transition: var(--transition);
-}
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            overflow-x: hidden;
+        }
 
-.filter-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-sm);
-}
+        .sidebar {
+            width: 250px;
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--primary-color) 0%, #224abe 100%);
+            color: white;
+            position: fixed;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
 
-.filter-card .card-body {
-    padding: 1rem;
-}
+        .sidebar-brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            letter-spacing: 0.05rem;
+            z-index: 1;
+        }
 
-.filter-card .form-control, 
-.filter-card .form-select {
-    margin-bottom: 0.5rem;
-}
+        .sidebar-brand i {
+            font-size: 2rem;
+            display: block;
+        }
 
-/* Quick Filter Buttons */
-.quick-filter-btn {
-    margin-right: 0.5rem;
-    margin-bottom: 0.5rem;
-}
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0 1rem 1rem;
+        }
 
-/* Export Button */
-.btn-export {
-    background-color: #28a745;
-    color: white;
-    border: none;
-}
+        .nav-item {
+            position: relative;
+        }
 
-.btn-export:hover {
-    background-color: #218838;
-    color: white;
-}
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            transition: all 0.3s;
+        }
 
-/* Clear Filters Button */
-.btn-clear {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-}
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
 
-.btn-clear:hover {
-    background-color: #5a6268;
-    color: white;
-}
+        .nav-link i {
+            margin-right: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .nav-link.active {
+            color: white;
+        }
+
+        .nav-link.active:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background-color: white;
+        }
+
+        #content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        .topbar {
+            height: 4.375rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            background-color: white;
+        }
+
+        .sidebar.toggled {
+            margin-left: -250px;
+        }
+
+        #content.toggled {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.35rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .card-header i {
+            color: var(--primary-color);
+        }
+
+        .welcome-header {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            margin-bottom: 1rem;
+            color: #212529;
+        }
+
+        .table th {
+            background-color: var(--primary-color);
+            color: white;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.075);
+        }
+
+        .pagination {
+            margin-top: 1rem;
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .page-link {
+            color: var(--primary-color);
+        }
+
+        .footer {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .rating-1 {
+            color: #dc3545;
+        }
+
+        /* Red for 1 */
+        .rating-2 {
+            color: #fd7e14;
+        }
+
+        /* Orange for 2 */
+        .rating-3 {
+            color: #ffc107;
+        }
+
+        /* Yellow for 3 */
+        .rating-4 {
+            color: #20c997;
+        }
+
+        /* Teal for 4 */
+        .rating-5 {
+            color: #28a745;
+        }
+
+        /* Green for 5-10 */
+
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+
+            #content {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .sidebar.toggled {
+                margin-left: 0;
+            }
+
+            #content.toggled {
+                margin-left: 250px;
+                width: calc(100% - 250px);
+            }
+        }
+
+        /* Loader Styles */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary-color);
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
+
 <body>
+    <!-- Loader Overlay -->
+    <div class="loader-overlay" id="loader">
+        <span class="loader"></span>
+    </div>
     <!-- Sidebar -->
     <nav class="sidebar">
         <div class="sidebar-brand text-center py-4">
@@ -212,6 +395,12 @@ if (isset($_GET['export'])) {
                     <span>Profile</span>
                 </a>
             </li>
+            <!-- <li class="nav-item">
+                <a class="nav-link" href="users.php">
+                    <i class="fas fa-fw fa-users"></i>
+                    <span>User Management</span>
+                </a>
+            </li> -->
             <li class="nav-item">
                 <a class="nav-link" href="logout.php">
                     <i class="fas fa-fw fa-sign-out-alt"></i>
@@ -229,83 +418,99 @@ if (isset($_GET['export'])) {
                 <button class="btn btn-link d-md-none rounded-circle mr-3" id="sidebarToggle">
                     <i class="fa fa-bars"></i>
                 </button>
-                <span class="text-gray-800 mb-0 fw-bold"> Feedback Management</span>
-                <h5 class=""></h5>
+                <span class="text-gray-800 mb-0 fw-bold">Feedback Management</span>
             </div>
         </nav>
 
         <!-- Main Content -->
         <div class="container-fluid">
-            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                <h1 class="h3 mb-0 text-gray-800">User Feedback</h1>
-                <div>
-                    <a href="feedback.php?export=1<?= isset($_GET['rating']) ? '&rating='.$_GET['rating'] : '' ?><?= isset($_GET['start_date']) ? '&start_date='.$_GET['start_date'] : '' ?><?= isset($_GET['end_date']) ? '&end_date='.$_GET['end_date'] : '' ?><?= isset($_GET['quick_filter']) ? '&quick_filter='.$_GET['quick_filter'] : '' ?>" class="btn btn-export">
-                        <i class="fas fa-file-export"></i> Export to CSV
-                    </a>
+            <?php if (isset($_SESSION['message'])): ?>
+                <div class="alert alert-<?= $_SESSION['message_type'] ?> alert-dismissible fade show">
+                    <?= $_SESSION['message'] ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+                <?php
+                unset($_SESSION['message']);
+                unset($_SESSION['message_type']);
+                ?>
+            <?php endif; ?>
+
+            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                <h1 class="welcome-header">
+                    Welcome back, <?= htmlspecialchars($_SESSION['username']) ?>
+                </h1>
+                <a href="feedback.php?export=1<?= http_build_query($filters) ?>" class="btn btn-success">
+                    <i class="fas fa-file-export mr-2"></i> Export to CSV
+                </a>
             </div>
 
-            <!-- Filter Cards -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card filter-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-filter"></i> Filter Feedback</h5>
-                            <form method="GET" action="feedback.php">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <label for="rating" class="form-label">Rating</label>
-                                        <select class="form-select" id="rating" name="rating">
-                                            <option value="">All Ratings</option>
-                                            <?php for ($i = 1; $i <= 10; $i++): ?>
-                                                <option value="<?= $i ?>" <?= isset($_GET['rating']) && $_GET['rating'] == $i ? 'selected' : '' ?>>
-                                                    <?= str_repeat('★', $i) ?> (<?= $i ?>/10)
-                                                </option>
-                                            <?php endfor; ?>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="start_date" class="form-label">From Date</label>
-                                        <input type="date" class="form-control" id="start_date" name="start_date" value="<?= $start_date ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="end_date" class="form-label">To Date</label>
-                                        <input type="date" class="form-control" id="end_date" name="end_date" value="<?= $end_date ?>">
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <button type="submit" class="btn btn-primary me-2">
-                                            <i class="fas fa-search"></i> Apply Filters
-                                        </button>
-                                        <a href="feedback.php" class="btn btn-clear">
-                                            <i class="fas fa-times"></i> Clear
-                                        </a>
-                                    </div>
-                                </div>
-                            </form>
-                            
-                            <!-- Quick Filters -->
-                            <div class="mt-3">
-                                <h6 class="mb-2">Quick Filters:</h6>
-                                <a href="feedback.php?quick_filter=today" class="btn btn-sm btn-outline-primary quick-filter-btn <?= $quick_filter == 'today' ? 'active' : '' ?>">
-                                    <i class="fas fa-calendar-day"></i> Today
-                                </a>
-                                <a href="feedback.php?quick_filter=week" class="btn btn-sm btn-outline-primary quick-filter-btn <?= $quick_filter == 'week' ? 'active' : '' ?>">
-                                    <i class="fas fa-calendar-week"></i> This Week
-                                </a>
-                                <a href="feedback.php?quick_filter=month" class="btn btn-sm btn-outline-primary quick-filter-btn <?= $quick_filter == 'month' ? 'active' : '' ?>">
-                                    <i class="fas fa-calendar-alt"></i> This Month
+            <!-- Filter Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-filter mr-2"></i> <span>Filter Feedback</span>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="feedback.php">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Rating</label>
+                                <select class="form-select" name="rating">
+                                    <option value="">All Ratings</option>
+                                    <?php for ($i = 1; $i <= 10; $i++): ?>
+                                        <option value="<?= $i ?>" <?= $filters['rating'] == $i ? 'selected' : '' ?>>
+                                            <?= str_repeat('★', $i) ?> (<?= $i ?>/10)
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">From Date</label>
+                                <input type="date" class="form-control" name="start_date"
+                                    value="<?= $filters['start_date'] ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">To Date</label>
+                                <input type="date" class="form-control" name="end_date"
+                                    value="<?= $filters['end_date'] ?>">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search mr-2"></i> Apply
+                                </button>
+                                <a href="feedback.php" class="btn btn-secondary">
+                                    <i class="fas fa-times mr-2"></i> Clear
                                 </a>
                             </div>
+                        </div>
+                    </form>
+
+                    <!-- Quick Filters -->
+                    <div class="mt-3">
+                        <h6 class="mb-2">Quick Filters:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="feedback.php?quick_filter=today"
+                                class="btn btn-sm btn-outline-primary <?= $filters['quick_filter'] == 'today' ? 'active' : '' ?>">
+                                <i class="fas fa-calendar-day mr-2"></i> Today
+                            </a>
+                            <a href="feedback.php?quick_filter=week"
+                                class="btn btn-sm btn-outline-primary <?= $filters['quick_filter'] == 'week' ? 'active' : '' ?>">
+                                <i class="fas fa-calendar-week mr-2"></i> This Week
+                            </a>
+                            <a href="feedback.php?quick_filter=month"
+                                class="btn btn-sm btn-outline-primary <?= $filters['quick_filter'] == 'month' ? 'active' : '' ?>">
+                                <i class="fas fa-calendar-alt mr-2"></i> This Month
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Feedback Table -->
             <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-comments mr-2"></i> <span> Recent Feedback </span>
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-comments mr-2"></i> <span>Recent Feedback</span>
                     <span class="float-end">
-                        Showing <?= ($offset + 1) ?> to <?= min($offset + $limit, $total_rows) ?> of <?= $total_rows ?> records
+                        Showing <?= ($offset + 1) ?>-<?= min($offset + $limit, $total_rows) ?> of <?= $total_rows ?>
                     </span>
                 </div>
                 <div class="card-body">
@@ -322,29 +527,27 @@ if (isset($_GET['export'])) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php
-                                $counter = ($page - 1) * $limit + 1;
-                                while ($row = $result->fetch_assoc()): 
-                                    $rating_class = 'rating-' . (int)$row['rating'];
-                                ?>
+                                <?php if ($result->num_rows > 0): ?>
+                                    <?php while ($row = $result->fetch_assoc()): ?>
+                                        <tr>
+                                            <td><?= $row['id'] ?></td>
+                                            <td><?= htmlspecialchars($row['sender_number']) ?></td>
+                                            <td><?= htmlspecialchars($row['message']) ?></td>
+                                            <td class="rating-<?= min($row['rating'], 5) ?>">
+                                                <?= str_repeat('★', $row['rating']) ?> (<?= $row['rating'] ?>/10)
+                                            </td>
+                                            <td><?= date('M j, Y g:i A', strtotime($row['created_at'])) ?></td>
+                                            <td>
+                                                <a href="delete_feedback.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-danger"
+                                                    onclick="return confirm('Are you sure you want to delete this feedback?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
                                     <tr>
-                                        <td><?= $counter++ ?></td>
-                                        <td><?= htmlspecialchars($row['sender_number']) ?></td>
-                                        <td><?= htmlspecialchars($row['message']) ?></td>
-                                        <td class="rating-cell <?= $rating_class ?>">
-                                            <?= str_repeat('★', (int)$row['rating']) ?> (<?= $row['rating'] ?>/10)
-                                        </td>
-                                        <td><?= date('M j, Y g:i A', strtotime($row['created_at'])) ?></td>
-                                        <td>
-                                            <a href="delete.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this feedback?');">
-                                                <i class="fas fa-trash"></i> 
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                <?php if ($result->num_rows == 0): ?>
-                                    <tr>
-                                        <td colspan="6" class="text-center">No feedback found with the current filters</td>
+                                        <td colspan="6" class="text-center py-4">No feedback found with current filters</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -356,21 +559,23 @@ if (isset($_GET['export'])) {
                         <ul class="pagination justify-content-center">
                             <?php if ($page > 1): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<?= $page - 1 ?><?= $rating_filter ? '&rating='.$rating_filter : '' ?><?= $start_date ? '&start_date='.$start_date : '' ?><?= $end_date ? '&end_date='.$end_date : '' ?><?= $quick_filter ? '&quick_filter='.$quick_filter : '' ?>" aria-label="Previous">
+                                    <a class="page-link" href="?page=<?= $page - 1 ?>&<?= http_build_query($filters) ?>">
                                         <span aria-hidden="true">&laquo;</span>
                                     </a>
                                 </li>
                             <?php endif; ?>
 
                             <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
-                                    <a class="page-link" href="?page=<?= $i ?><?= $rating_filter ? '&rating='.$rating_filter : '' ?><?= $start_date ? '&start_date='.$start_date : '' ?><?= $end_date ? '&end_date='.$end_date : '' ?><?= $quick_filter ? '&quick_filter='.$quick_filter : '' ?>"><?= $i ?></a>
+                                <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $i ?>&<?= http_build_query($filters) ?>">
+                                        <?= $i ?>
+                                    </a>
                                 </li>
                             <?php endfor; ?>
 
                             <?php if ($page < $total_pages): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<?= $page + 1 ?><?= $rating_filter ? '&rating='.$rating_filter : '' ?><?= $start_date ? '&start_date='.$start_date : '' ?><?= $end_date ? '&end_date='.$end_date : '' ?><?= $quick_filter ? '&quick_filter='.$quick_filter : '' ?>" aria-label="Next">
+                                    <a class="page-link" href="?page=<?= $page + 1 ?>&<?= http_build_query($filters) ?>">
                                         <span aria-hidden="true">&raquo;</span>
                                     </a>
                                 </li>
@@ -381,30 +586,40 @@ if (isset($_GET['export'])) {
             </div>
         </div>
     </div>
+
     <!-- Footer -->
-<footer class="footer mt-5 py-3 bg-light text-center border-top">
-    <div class="container">
-        <span class="text-muted">
-            &copy; <?= date('Y') ?> Mrejesho Bot. All rights reserved.
-        </span>
-        <br>
-        <small class="text-muted">
-            Developed by <a href="#" target="_blank" class="text-decoration-none">David M. Mushi</a>
-        </small>
-    </div>
-</footer>
+    <footer class="footer mt-5 py-3 bg-light text-center border-top">
+        <div class="container">
+            <span class="text-muted">
+                &copy; <?= date('Y') ?> Mrejesho Bot. All rights reserved.
+            </span>
+            <br>
+            <small class="text-muted">
+                Developed by <a href="#" target="_blank" class="text-decoration-none">David M. Mushi</a>
+            </small>
+        </div>
+    </footer>
 
-    <!-- Bootstrap 5 JS Bundle with Popper -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
+    <!-- Bootstrap 5 JS Bundle with Popper (local) -->
+    <!-- <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script> -->
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <!-- Font Awesome JS (local) -->
+    <script src="assets/js/fontawesome.min.js"></script>
     <!-- Custom JS -->
-     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
+        // Hide loader when page is fully loaded
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.getElementById('loader').style.display = 'none';
+            }, 500); // Add slight delay for smoother transition
+        });
+
         // Toggle sidebar on mobile
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
+        document.getElementById('sidebarToggle').addEventListener('click', function () {
             document.querySelector('.sidebar').classList.toggle('toggled');
             document.getElementById('content').classList.toggle('toggled');
         });
     </script>
 </body>
+
 </html>

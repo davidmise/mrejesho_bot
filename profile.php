@@ -44,27 +44,273 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
     $qrCodeSvg = $qrResult->getString();
     $encodedQr = base64_encode($qrCodeSvg);
 }
+
+// Fetch user data
+$userStmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+$userStmt->bind_param("s", $username);
+$userStmt->execute();
+$userResult = $userStmt->get_result();
+$user = $userResult->fetch_assoc();
+
+// Handle password change
+$message = '';
+$messageType = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    $currentPassword = $_POST['current_password'];
+    $newPassword = $_POST['new_password'];
+    $confirmPassword = $_POST['confirm_password'];
+
+    if (password_verify($currentPassword, $user['password'])) {
+        if ($newPassword === $confirmPassword) {
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE username = ?");
+            $updateStmt->bind_param("ss", $hashedPassword, $username);
+
+            if ($updateStmt->execute()) {
+                $message = 'Password changed successfully!';
+                $messageType = 'success';
+            } else {
+                $message = 'Error updating password. Please try again.';
+                $messageType = 'danger';
+            }
+        } else {
+            $message = 'New passwords do not match.';
+            $messageType = 'danger';
+        }
+    } else {
+        $message = 'Current password is incorrect.';
+        $messageType = 'danger';
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Mrejesho Bot</title>
     <!-- Favicon -->
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap 5 CSS -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Bootstrap 5 CSS (local) -->
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- <link href="assets/css/bootstrap.min.css" rel="stylesheet"> -->
+    <!-- Font Awesome (local) -->
+    <link href="node_modules/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/solid.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/styles.css">
+    <!-- <link href="assets/css/styles.css" rel="stylesheet"> -->
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --accent-color: #dddfeb;
+            --text-color: #858796;
+            --dark-color: #5a5c69;
+        }
 
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--primary-color) 0%, #224abe 100%);
+            color: white;
+            position: fixed;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            letter-spacing: 0.05rem;
+            z-index: 1;
+        }
+
+        .sidebar-brand i {
+            font-size: 2rem;
+            display: block;
+        }
+
+        .sidebar-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0 1rem 1rem;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-link i {
+            margin-right: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .nav-link.active {
+            color: white;
+        }
+
+        .nav-link.active:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background-color: white;
+        }
+
+        #content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+            transition: all 0.3s;
+        }
+
+        .topbar {
+            height: 4.375rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            background-color: white;
+        }
+
+        .sidebar.toggled {
+            margin-left: -250px;
+        }
+
+        #content.toggled {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.35rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .card-header i {
+            color: var(--primary-color);
+        }
+
+        .welcome-header {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 0.35rem;
+            margin: 1rem 0;
+        }
+
+        .footer {
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+
+            #content {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .sidebar.toggled {
+                margin-left: 0;
+            }
+
+            #content.toggled {
+                margin-left: 250px;
+                width: calc(100% - 250px);
+            }
+        }
+
+        /* Loader Styles */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid var(--primary-color);
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <!-- Loader Overlay -->
+    <div class="loader-overlay" id="loader">
+        <span class="loader"></span>
+    </div>
     <!-- Sidebar -->
     <nav class="sidebar">
         <div class="sidebar-brand text-center py-4">
@@ -73,23 +319,29 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
         <div class="sidebar-divider"></div>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link" href="index.php">
+                <a class="nav-link " href="index.php">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" href="feedback.php">
+                <a class="nav-link" href="feedback.php">
                     <i class="fas fa-fw fa-comments"></i>
                     <span>Feedback</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="profile.php">
+                <a class="nav-link active" href="profile.php">
                     <i class="fas fa-fw fa-user"></i>
                     <span>Profile</span>
                 </a>
             </li>
+            <!-- <li class="nav-item">
+                <a class="nav-link" href="users.php">
+                    <i class="fas fa-fw fa-users"></i>
+                    <span>User Management</span>
+                </a>
+            </li> -->
             <li class="nav-item">
                 <a class="nav-link" href="logout.php">
                     <i class="fas fa-fw fa-sign-out-alt"></i>
@@ -107,8 +359,7 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                 <button class="btn btn-link d-md-none rounded-circle mr-3" id="sidebarToggle">
                     <i class="fa fa-bars"></i>
                 </button>
-                <span class="text-gray-800 mb-0 fw-bold">Organization Profile </span>
-                <h5 class=""></h5>
+                <span class="text-gray-800 mb-0 fw-bold">Organization Profile</span>
             </div>
         </nav>
 
@@ -159,6 +410,33 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                     </div>
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-save mr-2"></i> Update
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-building mr-2"></i> <span>Organization Information</span>
+                            </div>
+                            <div class="card-body">
+                                <form action="profile.php" method="POST">
+                                    <div class="mb-3">
+                                        <label for="current_password" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="current_password"
+                                            name="current_password" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="new_password" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="new_password" name="new_password"
+                                            required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="confirm_password"
+                                            name="confirm_password" required>
+                                    </div>
+                                    <button type="submit" name="change_password" class="btn btn-primary">
+                                        <i class="fas fa-save mr-2"></i> Change Password
                                     </button>
                                 </form>
                             </div>
@@ -219,17 +497,18 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
                                     </a>
                                 </div>
                             </div>
-                                            <?php else: ?>
+                        <?php else: ?>
                             <div class="card p-2">
-                                <div class="bg-light  text-muted text-center">
-                                <p> Type the command `node index.js` to start the bot. </p>
-
+                                <div class="bg-light text-muted text-center">
+                                    <p>Type the command `node index.js` to start the bot.</p>
                                 </div>
                             </div>
                         <?php endif; ?>
-
                     </div>
+
                 </div>
+
+
             <?php else: ?>
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle mr-2"></i>Organization or user information not found.
@@ -251,17 +530,26 @@ if ($org && !empty($org['whatsapp_number']) && !empty($org['secret_code'])) {
         </div>
     </footer>
 
-
-    <!-- Bootstrap 5 JS Bundle with Popper -->
-    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle with Popper (local) -->
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <!-- Font Awesome JS (local) -->
+    <script src="assets/js/fontawesome.min.js"></script>
     <!-- Custom JS -->
     <script>
+         // Hide loader when page is fully loaded
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.getElementById('loader').style.display = 'none';
+            }, 500); // Add slight delay for smoother transition
+        });
+
         // Toggle sidebar on mobile
         document.getElementById('sidebarToggle').addEventListener('click', function () {
             document.querySelector('.sidebar').classList.toggle('toggled');
             document.getElementById('content').classList.toggle('toggled');
         });
     </script>
+
 </body>
 
 </html>
