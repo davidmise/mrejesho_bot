@@ -128,9 +128,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="mb-3 position-relative">
                     <label for="password" class="form-label">Password</label>
                     <input type="password" class="form-control" name="password" id="password" required>
-                    <span class="password-toggle" onclick="togglePassword()">
+                    <!-- <span class="password-toggle" onclick="togglePassword()">
                         <i class="fas fa-eye"></i>
-                    </span>
+                    </span> -->
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-login">
